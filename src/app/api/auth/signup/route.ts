@@ -1,15 +1,14 @@
 import { PrismaClient } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 const prisma = new PrismaClient();
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    console.log("Received Data:", body);
-
-    const { email, password, name } = body;
+    const { email, password, name } = await req.json();
 
     if (!email || !password || !name) {
       return NextResponse.json(
@@ -28,20 +27,16 @@ export async function POST(req: Request) {
     }
 
     const hashedPassword = await hash(password, 10);
-    console.log("Hashed Password:", hashedPassword);
 
     const newUser = await prisma.user.create({
       data: { email, name, password: hashedPassword },
     });
-
-    console.log("User Created:", newUser);
 
     return NextResponse.json(
       { message: "User created successfully", user: newUser },
       { status: 201 }
     );
   } catch (error: any) {
-    console.error("Signup Error:", error.message);
     return NextResponse.json(
       { error: "Internal server error", details: error.message },
       { status: 500 }

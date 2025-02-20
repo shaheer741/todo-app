@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { signIn } from "next-auth/react";
 
 export default function SignUpPage() {
   const [email, setEmail] = useState("");
@@ -20,6 +21,13 @@ export default function SignUpPage() {
       return;
     }
 
+    //  Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Invalid email format");
+      return;
+    }
+
     const res = await fetch("/api/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -31,8 +39,20 @@ export default function SignUpPage() {
     if (!res.ok) {
       setError(data.error);
     } else {
-      setSuccess("Sign-up successful! Redirecting...");
-      setTimeout(() => router.push("/"), 1000);
+      setSuccess("Sign-up successful! Logging you in...");
+
+      //  Automatically sign in after successful signup
+      const signInRes = await signIn("credentials", {
+        email,
+        password,
+        redirect: false, // Prevent full page reload
+      });
+
+      if (signInRes?.error) {
+        setError(signInRes.error);
+      } else {
+        router.push("/"); //  Redirect to homepage
+      }
     }
   };
 
