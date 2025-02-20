@@ -42,15 +42,35 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async session({ session }) {
-      const dbUser = await prisma.user.findUnique({
-        where: { email: session.user?.email ?? "" },
-      });
+      if (session.user?.email) {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: session.user.email },
+        });
 
-      if (dbUser) {
-        session.user.id = dbUser.id;
+        if (dbUser) {
+          session.user.id = dbUser.id; // ✅ Ensure `id` is included for all users
+        }
       }
 
       return session;
+    },
+    async signIn({ user }) {
+      if (!user.email) return false; // Prevent sign-in if no email is returned
+
+      let existingUser = await prisma.user.findUnique({
+        where: { email: user.email },
+      });
+
+      if (!existingUser) {
+        existingUser = await prisma.user.create({
+          data: {
+            email: user.email,
+            name: user.name || "Unknown",
+          },
+        });
+      }
+
+      return true;
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
